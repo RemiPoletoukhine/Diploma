@@ -5,7 +5,6 @@ from PyProbs import Probability as Pr
 from collections import namedtuple
 
 # chosen values:
-#THE_SEED = 212121212
 FOOD_NUM = 1
 PAY_NUM = 1
 # serving parameters for normal distribution
