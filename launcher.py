@@ -58,5 +58,5 @@ def several_times_probs(probs, n):
 
 
 # export the data
-several_times_probs(np.arange(0.0, 0.7, 0.1), 5).to_csv('final_data.csv', index=False)
+several_times_probs(np.arange(0.0, 1.1, 0.1), 2).to_csv('final_data.csv', index=False)
 

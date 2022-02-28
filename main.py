@@ -58,13 +58,12 @@ class Cafeteria(object):
         # print("Cashier Zuck finished the checkout of %s's order in %.2f minutes." % (customer, payment_time_random))
 
 
-def customer(env, name, seats_required, cafe, has_table, probability):
+def customer(env, name, seats_required, cafe, pre_booking, probability):
     global df_stats
     # the customer process (identified by "name") enters the cafeteria ("cafe")
     arrival_time = env.now
     # print("%s enters the cafeteria at %.2f." % (name, env.now))
     has_vacant_tables = False
-    pre_booking = 0
     for i in range(len(cafe.table_res_list.items)):
         # print(cafe.table_res_list.items[i])
         if cafe.table_res_list.items[i].seats >= seats_required:
@@ -84,7 +83,6 @@ def customer(env, name, seats_required, cafe, has_table, probability):
             # print("%s has been booking a table for %.2f." % (name, booking_time_random))
             # print("%s booked a table at %.2f." % (name, env.now))
             booking_finish = env.now
-            has_table = True
             pre_booking = 1
         else:
             pass
@@ -109,7 +107,7 @@ def customer(env, name, seats_required, cafe, has_table, probability):
     payment_finish = env.now
 
     # check if the customer has a booked table
-    if not has_table:
+    if not pre_booking:
         # customer looks for a table because hasn't booked in advance
         # print("%s has no choice but to try to book a table for %d at %.2f." % (name, seats_required, env.now))
         booking_start = env.now
@@ -157,7 +155,7 @@ def setup(env, food_num, pay_num, c_amount, table_list, probability):
     # customers generator
     for i in range(c_amount):
         # version with name: env.process(customer(env, "Customer %d" % i, np.random.randint(1, 5), cafeteria, False))
-        env.process(customer(env, i, np.random.randint(1, 5), cafeteria, False, probability))
+        env.process(customer(env, i, np.random.randint(1, 5), cafeteria, 0, probability))
         # print("Customer %d appears at %.2f" % (i, env.now))
 
         # arbitrary delay before the next customer
