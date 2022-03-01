@@ -16,11 +16,13 @@ PAY_TIME_VAR = 0.1
 # number of customers
 C_AMOUNT = 100
 # client occurrences rate for exponential distribution (beta = 1 / lambda)
-BETA = 1
+BETA = 3
 # list of tables in cafe: 6 tables for two, 4 tables for three, 5 tables for four
 TABLE_LIST = [2, 4, 2, 3, 2,
-              4, 3, 2, 4, 2,
-              3, 2, 4, 3, 4]
+              4, 3, 2]#, 4, 2,  - Shorter version
+              #3, 2, 4, 3, 4]
+# list to choose a seats_required value for customers from
+SEATS_LIST = [1, 1, 1, 2, 2, 2, 2, 3, 3, 4]
 # booking parameters for normal distribution
 BOOKING_TIME_MEAN = 1
 BOOKING_TIME_VAR = 0.1
@@ -153,8 +155,11 @@ def setup(env, food_num, pay_num, c_amount, table_list, probability):
 
     # customers generator
     for i in range(c_amount):
+        # let's shuffle the seats array
+        np.random.shuffle(SEATS_LIST)
         # version with name: env.process(customer(env, "Customer %d" % i, np.random.randint(1, 5), cafeteria, False))
-        env.process(customer(env, i, np.random.randint(1, 5), cafeteria, 0, probability))
+        env.process(customer(env, i, np.random.choice(SEATS_LIST),
+                             cafeteria, 0, probability))
         # print("Customer %d appears at %.2f" % (i, env.now))
 
         # arbitrary delay before the next customer
@@ -173,3 +178,5 @@ def launcher(probability, seed_value):
 
     return df_stats
 
+
+#launcher(0.5, 1).to_csv('weird_flex4.csv', index=False)
