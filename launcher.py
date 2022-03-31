@@ -12,6 +12,7 @@ def several_probs(probs):
     inter_data = pd.DataFrame(data=[], columns=['Customer', 'Possibility', 'PreBooking',
                                                 'QueueingTime', 'PaymentTime', 'BookingTime',
                                                 'EatingTime', 'TotalTime'])
+
     # repeating for each possibility: 0.1, 0.2, ..., 1 with identical random values each times
     seed_val = np.random.randint(1, 12345678)
     for possibility in probs:
@@ -58,5 +59,4 @@ def several_times_probs(probs, n):
 
 
 # export the data
-several_times_probs(np.arange(0.0, 1.01, 0.01), 100).to_csv('small_table_list_big.csv', index=False)
-
+several_times_probs(np.arange(0.0, 1.05, 0.05), 10).to_csv('analysis5_7.csv', index=False)
