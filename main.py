@@ -8,32 +8,31 @@ from collections import namedtuple
 # chosen values:
 FOOD_NUM = 1
 PAY_NUM = 1
-# serving parameters for normal distribution
-FOOD_TIME_MEAN = 1.5
-FOOD_TIME_VAR = 0.4
-# payment parameters for normal distribution
+# serving parameters for Erlang distribution
+FOOD_TIME_MEAN = 2
+FOOD_TIME_VAR = 2
+# payment parameters for Erlang distribution
 PAY_TIME_MEAN = 1
-PAY_TIME_VAR = 0.1
+PAY_TIME_VAR = 0.5
 # number of customers
 C_AMOUNT = 100
 # client occurrences rate for exponential distribution (beta = 1 / lambda)
 BETA = 0.5
-# list of tables in cafe: 6 tables for two, 4 tables for three, 5 tables for four
+# list of tables in café: 6 tables for two, 4 tables for three, 5 tables for four
 TABLE_LIST = [4, 4, 4, 4, 2, 2, 3, 2,
-              4, 3, 2, 4, 2,  #- Shorter version
+              4, 3, 2, 4, 2,
               3, 2, 4, 3, 4]
-#TABLE_LIST = [4, 4, 2, 2, 3, 3, 4, 2, 2, 4]
 # list to choose a seats_required value for customers from
 SEATS_LIST = [1, 2, 3, 4]
 # booking parameters for normal distribution
 BOOKING_TIME_MEAN = 1
 BOOKING_TIME_VAR = 0.1
 # eating parameters for normal distribution
-EATING_TIME_MEAN = 18
-EATING_TIME_VAR = 2
+EATING_TIME_MEAN = 15
+EATING_TIME_VAR = 1
 
 
-class Cafeteria:#(object):
+class Cafeteria:
 
     def __init__(self, env, food_num, pay_num, table_list, seed):
         self.env = env
@@ -52,21 +51,15 @@ class Cafeteria:#(object):
 
     def order(self, client):
         # the process of ordering
-        #service_time_random = abs(np.random.normal(loc=FOOD_TIME_MEAN, scale=FOOD_TIME_VAR))
-        service_time_random = abs(stats.norm.rvs(loc=FOOD_TIME_MEAN,
-                                                 scale=FOOD_TIME_VAR,
-                                                 random_state=self.seed + client))
-        #service_time_random = 1.5
+        service_time_random = stats.erlang.rvs(a=2, loc=FOOD_TIME_MEAN,
+                                               scale=FOOD_TIME_VAR, random_state=self.seed + client)
         yield self.env.timeout(service_time_random)
         # print("Serviceman Mark composed the %s's order in %.2f minutes." % (client, service_time_random))
 
     def payment(self, client):
         # the process of payment
-        #payment_time_random = abs(np.random.normal(loc=PAY_TIME_MEAN, scale=PAY_TIME_VAR))
-        payment_time_random = abs(stats.norm.rvs(loc=PAY_TIME_MEAN,
-                                                 scale=PAY_TIME_VAR,
-                                                 random_state=self.seed + client))
-        #payment_time_random = 1
+        payment_time_random = stats.erlang.rvs(a=2, loc=PAY_TIME_MEAN,
+                                               scale=PAY_TIME_VAR, random_state=self.seed + client)
         yield self.env.timeout(payment_time_random)
         # print("Cashier Zuck finished the checkout of %s's order in %.2f minutes." % (client, payment_time_random))
 
@@ -83,19 +76,16 @@ def customer(env, name, seats_required, cafe, pre_booking, probability, seed, in
             has_vacant_tables = True
     # the process of table booking
     # the customer books a table in advance with a certain possibility
-    nominal_possibility = probability
+    nominal_possibility = round(probability, 2)
     if Pr.Prob(nominal_possibility):
         # the option with pre-booking works only if no one seeks for the place (queue is empty)
-        # TODO: if a company enters the cafe, they stand in the queue for booking (not just to get a table try for once)
         if has_vacant_tables:
             # print("hmm, looks like I, %s, can book a table here" % name)
             booking_start = env.now
-            table = yield cafe.table_res_list.get(lambda table: table.seats >= seats_required)
-            #booking_time_random = abs(np.random.normal(loc=BOOKING_TIME_MEAN, scale=BOOKING_TIME_VAR))
+            table = yield cafe.table_res_list.get(lambda place: place.seats >= seats_required)
             booking_time_random = abs(stats.norm.rvs(loc=BOOKING_TIME_MEAN,
                                                      scale=BOOKING_TIME_VAR,
                                                      random_state=seed + name))
-            #booking_time_random = 1
             yield cafe.env.timeout(booking_time_random)
             # print("%s has been booking a table for %.2f." % (name, booking_time_random))
             # print("%s booked a table at %.2f." % (name, env.now))
@@ -128,12 +118,10 @@ def customer(env, name, seats_required, cafe, pre_booking, probability, seed, in
         # customer looks for a table because hasn't booked in advance
         # print("%s has no choice but to try to book a table for %d at %.2f." % (name, seats_required, env.now))
         booking_start = env.now
-        table = yield cafe.table_res_list.get(lambda table: table.seats >= seats_required)
-        #booking_time_random = abs(np.random.normal(loc=BOOKING_TIME_MEAN, scale=BOOKING_TIME_VAR))
+        table = yield cafe.table_res_list.get(lambda place: place.seats >= seats_required)
         booking_time_random = abs(stats.norm.rvs(loc=BOOKING_TIME_MEAN,
                                                  scale=BOOKING_TIME_VAR,
                                                  random_state=seed+name))
-        #booking_time_random = 1
         yield cafe.env.timeout(booking_time_random)
         # print("%s booked a table at %.2f." % (name, env.now))
         booking_finish = env.now
@@ -142,11 +130,9 @@ def customer(env, name, seats_required, cafe, pre_booking, probability, seed, in
     # print("%s starts eating at %.2f." % (name, env.now))
     # eating requires no less than 5 minutes
     eating_start = env.now
-    #eating_random = abs(np.random.normal(loc=EATING_TIME_MEAN, scale=EATING_TIME_VAR))
-    eating_random = abs(stats.norm.rvs(loc=EATING_TIME_MEAN,
+    eating_random = abs(stats.norm.rvs(loc=EATING_TIME_MEAN + seats_required,
                                        scale=EATING_TIME_VAR,
                                        random_state=seed+name))
-    #eating_random = 15
     yield env.timeout(eating_random)
     eating_finish = env.now
     # print("%s eats for %.2f." % (name, eating_random))
@@ -183,30 +169,31 @@ def setup(env, food_num, pay_num, c_amount, table_list, probability, seed_val, c
         np.random.seed(seed_val + i)
         # arbitrary delay before the next customer
         if c_interv is None:
-            print('No c_interval given')
-            c_interval_random = abs(stats.norm.rvs(loc=0.3, scale=0.3 / 3, random_state=seed_val + i))
+            # print('No c_interval given')
+            # c_interval_random = abs(stats.norm.rvs(loc=0.3, scale=0.3 / 3, random_state=seed_val + i))
+            c_interval_random = 3
         else:
             # fixed_interval situation
-            # c_interval_random = round(c_interv, 2)  # in order to avoid the 0.60000..01 cases
-            # normal distibution (here the c_interv input is a mean)
+            c_interval_random = round(c_interv, 2)  # in order to avoid the 0.60000..01 cases
+            # normal distribution (here the c_interv input is a mean)
             # c_interval_random = abs(stats.norm.rvs(loc=c_interv, scale=c_interv / 3, random_state=seed_val))
             # exponential distribution (here the c_interv is a scale)
-            c_interval_random = stats.expon.rvs(loc=0, scale=c_interv, random_state=seed_val)
+            # c_interval_random = stats.expon.rvs(loc=0, scale=c_interv, random_state=seed_val)
             # different interv for one launch: if the number is even:
             # if i % 2 == 0:
-                # c_interval_random = round(c_interv, 2)
+            #     c_interval_random = round(c_interv, 2)
             # else:
-                # c_interval_random = stats.expon.rvs(loc=0, scale=c_interv, random_state=seed_val)
+            #     c_interval_random = stats.expon.rvs(loc=0, scale=c_interv, random_state=seed_val)
 
         # version with name: env.process(customer(env, "Customer %d" % i, np.random.randint(1, 5), cafeteria, False))
         env.process(customer(env, i, np.random.choice(SEATS_LIST, p=[0.3, 0.4, 0.2, 0.1]),
                              cafeteria, 0, probability, seed_val, c_interval_random))
         # print("Customer %d appears at %.2f" % (i, env.now))
 
-        #c_interval_random = np.random.exponential(scale=BETA)
-        #c_interval_random = min(0.5, stats.expon.rvs(loc=0, scale=BETA, random_state=seed_val + i))
-        #c_interval_random = stats.erlang.rvs(a=2, loc=0.25, scale=0.1, random_state=seed_val + i)
-        #c_interval_random = abs(stats.norm.rvs(loc=2, scale=0.5, random_state=seed_val + i))
+        # c_interval_random = np.random.exponential(scale=BETA)
+        # c_interval_random = min(0.5, stats.expon.rvs(loc=0, scale=BETA, random_state=seed_val + i))
+        # c_interval_random = stats.erlang.rvs(a=2, loc=0.25, scale=0.1, random_state=seed_val + i)
+        # c_interval_random = abs(stats.norm.rvs(loc=2, scale=0.5, random_state=seed_val + i))
 
         yield env.timeout(c_interval_random)
 
@@ -223,23 +210,4 @@ def launcher(probability, seed_value, client_intervals=None):
     return df_stats
 
 
-# New function for stats
-# repeating for several probs and c_interval
-def several_intervals(intervals, probabilities):
-    # yes, another df
-    data_out = pd.DataFrame(data=[], columns=['Customer', 'NominalPossibility', 'CInterval', 'SeatsRequired',
-                                              'ArrivalTime', 'PreBooking', 'QueueingStart', 'QueueingFinish',
-                                              'PaymentStart', 'PaymentFinish', 'BookingStart',
-                                              'BookingFinish', 'Table', 'EatingStart', 'EatingFinish'])
-    seed_val = np.random.randint(1, 12345678)
-    for interval in intervals:
-        for probability in probabilities:
-            data_out = pd.concat([data_out, launcher(probability, seed_val, interval)],
-                                 ignore_index=True)
-
-    return data_out
-
-
-#several_intervals(intervals=np.arange(0.0, 2, 0.25),
-                  #probabilities=np.arange(0.0, 1.01, 0.01)).to_csv('analysis5_13.csv', index=False)
-launcher(0.5, 2, 0.5).to_csv('latex_sample.csv', index=False)
+# launcher(1, 3, 0).to_csv('just_to_make_sure.csv', index=False)
