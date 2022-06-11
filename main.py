@@ -270,8 +270,6 @@ def setup(
 
 
 def launcher(probability, seed_value, client_intervals=None):
-    # let's do the seed to compare identical random values
-    # np.random.seed(seed_value)
     # Create an environment and start the setup process
     env = sp.Environment()
     env.process(

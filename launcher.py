@@ -127,5 +127,6 @@ def several_times_probs(probs, n):
 
 # export the data
 several_intervals(
-    intervals=np.arange(0.0, 1.01, 0.01), probabilities=np.arange(0.0, 1.01, 0.01)
+    intervals=np.arange(0.0, 1.01, 0.01),
+    probabilities=np.arange(0.0, 1.01, 0.01)
 ).to_csv("tables_9.csv", index=False)
